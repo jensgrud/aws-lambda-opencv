@@ -1,0 +1,34 @@
+{
+  "name": "aws-lambda-opencv-face-detection",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AWS Lambda function to detect faces",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "./node_modules/.bin/gulp postinstall",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "ffmpeg"
+  ],
+  "author": "Jens Grud",
+  "license": "Unlicense",
+  "devDependencies": {
+    "aws-sdk": "2.2.12",
+    "del": "^1.1.1",
+    "gulp": "^3.8.11",
+    "gulp-flatten": "0.0.4",
+    "gulp-install": "^0.4.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-shell": "^0.4.0",
+    "gulp-util": "^3.0.4",
+    "gulp-zip": "^3.0.2",
+    "run-sequence": "^1.0.2"
+  },
+  "dependencies": {
+    "async": "^0.9.0",
+    "opencv": "file:node_modules/opencv"
+  }
+}

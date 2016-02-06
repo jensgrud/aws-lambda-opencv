@@ -1,0 +1,19 @@
+{
+	"videoMaxWidth": 320,
+	"videoMaxDuration": 60,
+	"functionBucket": "video",
+	"sourceBucket": "video/upload",
+	"destinationBucket": "video/processed",
+	"linkPrefix": "https://s3-eu-west-1.amazonaws.com/heaps-static",
+	"gzip": false,
+	"format": {
+		"image": {
+			"extension": "jpeg",
+			"mimeType": "image/jpeg"
+		},
+		"video": {
+			"extension": "mp4",
+			"mimeType": "video/mp4"
+		}
+	}
+}
