@@ -20,8 +20,10 @@ try {
 	config = {};
 }
 
-var filename = './build/3.1.0.zip';
-var fileURL = 'http://github.com/Itseez/opencv/archive/3.1.0.zip';
+var build = './build';
+var filename = '3.1.0';
+var fileURL = 'http://github.com/Itseez/opencv/archive';
+var extension = 'zip';
 
 gulp.task('postinstall', function(cb) {
 	async.reject(
@@ -38,43 +40,31 @@ gulp.task('postinstall', function(cb) {
 	);
 });
 
-gulp.task('download-opencv', function(cb) {
-	if(!fs.existsSync('./build')) {
-		fs.mkdirSync('./build');
-	}
-
-	var file = fs.createWriteStream(filename);
-	http.get(fileURL, function(response) {
-		response.pipe(file);
-
-		file.on('finish', function() {
-			file.close();
-			cb();
-		})
-	});
-});
+gulp.task('download-opencv', shell.task([
+	' wget ' + fileURL + '/' + filename + '.' + extension 
+]));
 
 // Resorting to using a shell task. Tried a number of other things including
 // LZMA-native, node-xz, decompress-tarxz. None of them work very well with this.
 // This will probably work well for OS X and Linux, but maybe not Windows without Cygwin.
 gulp.task('untar-opencv', shell.task([
-	'tar -xvf ' + filename + ' -C ./build'
+	'tar -xvf ' + filename + '.' + extension + ' -C ' + build
 ]));
 
 gulp.task('unzip-opencv', shell.task([
-	'unzip ' + filename + ' -d ./build'
+	'unzip ' + filename + '.' + extension + ' -d ' + build
 ]));
 
 gulp.task('cmake-opencv', shell.task([
-	'cd ./build; cmake -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_SHARED_LIBS=NO -D CMAKE_INSTALL_PREFIX=./opencv opencv-3.1.0/'
+	'cd ' + build + '; cmake -D CMAKE_BUILD_TYPE=RELEASE -D BUILD_SHARED_LIBS=NO -D CMAKE_INSTALL_PREFIX=./opencv opencv-' + filename + '/'
 ]));
 
 gulp.task('make-opencv', shell.task([
-	'cd ./build; make && make install'
+	'cd ' + build + '; make && make install'
 ]));
 
 gulp.task('npm-opencv', shell.task([
-	'cd ./build; mkdir opencv_example; PKG_CONFIG_PATH=./opencv/lib/pkgconfig/ npm install -–prefix=./opencv_example opencv'
+	'cd ./build; mkdir opencv_example; PKG_CONFIG_PATH=/home/ec2-user/aws-lambda-opencv/opencv/lib/pkgconfig/ npm install --prefix=./opencv_example opencv'
 ]));
 
 gulp.task('copy-opencv', function() {
@@ -173,7 +163,9 @@ gulp.task('deployStack', function(cb) {
 });
 
 gulp.task('default', function(cb) {
-	return runSequence(	
+	return runSequence(
+	//	['clean'],
+		['download-opencv'],
 		['unzip-opencv'],
 		['cmake-opencv'],
 		['make-opencv'],
