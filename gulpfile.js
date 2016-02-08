@@ -68,7 +68,7 @@ gulp.task('npm-opencv', shell.task([
 ]));
 
 gulp.task('copy-opencv', function() {
-	return gulp.src(['node_modules/opencv/*'])
+	return gulp.src(['./node_modules/opencv/**/*'])
 		.pipe(gulp.dest('./dist/node_modules/opencv'));
 });
 
@@ -162,9 +162,44 @@ gulp.task('deployStack', function(cb) {
 	});
 });
 
+gulp.task('upload', function() {
+
+  var lambda = new AWS.Lambda();
+  var functionName = 'aws-lamda-opencv-face-detection';
+
+  lambda.getFunction({FunctionName: functionName}, function(err, data) {
+    if (err) {
+      if (err.statusCode === 404) {
+        var warning = 'Unable to find lambda function ' + deploy_function + '. '
+        warning += 'Verify the lambda function name and AWS region are correct.'
+        gutil.log(warning);
+      } else {
+        var warning = 'AWS API request failed. '
+        warning += 'Check your AWS credentials and permissions.'
+        gutil.log(warning);
+      }
+    }
+
+fs.readFile('./dist.zip', function(err, data) {
+	var current = data.Configuration;
+    var params = {
+      FunctionName: functionName,
+	Publish: false,
+	ZipFile: data
+    };   
+      
+      lambda.updateFunctionCode(params, function(err, data) {
+	if (err) console.log(err, err.stack); // an error occurred
+	else     console.log(data);           // successful response             
+      });
+    });
+  });
+});
+
+
 gulp.task('default', function(cb) {
 	return runSequence(
-	//	['clean'],
+		['clean'],
 		['download-opencv'],
 		['unzip-opencv'],
 		['cmake-opencv'],
@@ -173,7 +208,7 @@ gulp.task('default', function(cb) {
 		['copy-opencv'],
 		['copy-haarcascade', 'js', 'npm'],
 		['zip'],
-		
+		['upload'],		
 		cb
 	);
 });
