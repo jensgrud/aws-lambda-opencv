@@ -1,6 +1,3 @@
-process.env['NODE_ENV'] = 'production';
-process.env['PATH'] += ':' + process.env['LAMBDA_TASK_ROOT'];
-
 var child_process = require('child_process');
 var fs = require('fs');
 var util = require('util');
@@ -102,9 +99,10 @@ function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
 
 
 function ffmpegProcess(description, cb) {
-	console.log('Starting FFmpeg ' + description);
-
-	cv.readImage("download", function(err, im){
+	
+var dlFile = path.join(tempDir, 'download');
+console.log('Starting Image processing' + description + dlFile);
+	cv.readImage(dlFile, function(err, im){
 		if (err) throw err;
   		if (im.width() < 1 || im.height() < 1) throw new Error('Image has no size');
 
@@ -118,7 +116,8 @@ function ffmpegProcess(description, cb) {
 
     	im.save(tempDir + '/out.' + config.format.image.extension);
     	console.log('Image saved to ' + tempDir + '/out.' + config.format.image.extension);
-  });
+	return cb(err, 'Image saved to ' + tempDir + '/out.' + config.format.image.extension); 
+ });
 });
 
 	
