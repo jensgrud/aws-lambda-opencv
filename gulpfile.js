@@ -105,6 +105,14 @@ gulp.task('uploadLambda', function() {
     });
 });
 
+// Upload the function code to S3
+gulp.task('upload', function(cb) {
+	s3.upload({
+		Bucket: config.bucket,
+		Key: "aws-lamda-opencv-face-detection.zip",
+		Body: fs.createReadStream('./dist.zip')
+	}, cb);
+});
 
 gulp.task('default', function(cb) {
 	return runSequence(
@@ -117,6 +125,7 @@ gulp.task('default', function(cb) {
 		['copy-opencv'],
 		['copy-haarcascade', 'js', 'npm'],
 		['zip'],
+		['upload']
 //		['uploadLambda'], issue with aws sdk and node 0.10.x https://github.com/aws/aws-sdk-js/issues/615,
 		cb
 	);
