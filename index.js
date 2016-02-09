@@ -1,14 +1,11 @@
 var child_process = require('child_process');
 var fs = require('fs');
-var util = require('util');
-var zlib = require('zlib');
 var crypto = require('crypto');
 var stream = require('stream');
 var path = require('path');
 var AWS = require('aws-sdk');
 var async = require('async');
 var config = require('./config');
-var scaleFilter = "scale='min(" + config.videoMaxWidth.toString() + "\\,iw):-2'";
 var s3 = new AWS.S3();
 var tempDir = process.env['TEMP'] || '/tmp';
 
@@ -48,25 +45,6 @@ function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
 	};
 
 	async.waterfall([
-		function(cb) {
-			if (!config.gzip)
-				return cb(null, readStream, filename);
-
-			var gzipFilename = filename + '.gzip';
-
-			rmFiles.push(gzipFilename);
-			params.ContentEncoding = 'gzip';
-
-			var gzipWriteStream = fs.createWriteStream(gzipFilename);
-
-			gzipWriteStream.on('finish', function() {
-				cb(null, fs.createReadStream(filename), gzipFilename);
-			});
-
-			readStream
-				.pipe(zlib.createGzip({level: zlib.Z_BEST_COMPRESSION}))
-				.pipe(gzipWriteStream);
-		},
 		function(fstream, uploadFilename, cb) {
 			console.log('Begin hashing', uploadFilename);
 
@@ -96,35 +74,31 @@ function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
 	], cb);
 }
 
-
-
-function ffmpegProcess(description, cb) {
+function detectFaces(file, cb) {
+	console.log('Starting Image processing' file);
 	
-var dlFile = path.join(tempDir, 'download');
-console.log('Starting Image processing' + description + dlFile);
-	cv.readImage(dlFile, function(err, im){
+	cv.readImage(file, function(err, im){
 		if (err) throw err;
   		if (im.width() < 1 || im.height() < 1) throw new Error('Image has no size');
 
   		im.detectObject("haarcascade_frontalface_alt.xml", {}, function(err, faces){
-    	if (err) throw err;
+    		if (err) throw err;
 
-    	for (var i = 0; i < faces.length; i++){
-      		var face = faces[i];
-      		im.ellipse(face.x + face.width / 2, face.y + face.height / 2, face.width / 2, face.height / 2);
-    	}
+    		for (var i = 0; i < faces.length; i++){
+      			var face = faces[i];
+      			im.ellipse(face.x + face.width / 2, face.y + face.height / 2, face.width / 2, face.height / 2);
+    		}
 
-    	im.save(tempDir + '/out.' + config.format.image.extension);
-    	console.log('Image saved to ' + tempDir + '/out.' + config.format.image.extension);
-	return cb(err, 'Image saved to ' + tempDir + '/out.' + config.format.image.extension); 
- });
-});
-
-	
+    		im.save(tempDir + '/out.' + config.format.image.extension);
+    	
+			return cb(err, 'Image saved to ' + tempDir + '/out.' + config.format.image.extension); 
+		});
+  	});
 }
 
 function processImage(s3Event, srcKey, cb) {
-	var dlFile = path.join(tempDir, 'download');
+
+	var file = path.join(tempDir, 'download');
 
 	async.series([
 		function(cb) {
@@ -135,7 +109,7 @@ function processImage(s3Event, srcKey, cb) {
 			dlStream.pipe(fs.createWriteStream(dlFile));
 		},
 		function(cb) {
-			ffmpegProcess(config.linkPrefix + '/' + srcKey, cb);
+			detectFaces(file, cb);
 		},
 		function(cb) {
 			console.log('Deleting download file');
@@ -145,7 +119,6 @@ function processImage(s3Event, srcKey, cb) {
 }
 
 exports.handler = function(event, context) {
-	console.log("Reading options from event:\n", util.inspect(event, {depth: 5}));
 
 	var s3Event = event.Records[0].s3;
 	var srcKey = decodeURIComponent(s3Event.object.key);
