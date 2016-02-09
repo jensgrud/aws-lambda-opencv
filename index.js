@@ -31,7 +31,7 @@ function s3upload(params, filename, cb) {
 }
 
 function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
-	console.log('Uploading', contentType, keyPrefix, bucket);
+	console.log('Uploading test', contentType, keyPrefix, bucket);
 
 	var filename = path.join(tempDir, 'out.' + fileExt);
 	var rmFiles = [filename];
@@ -45,6 +45,9 @@ function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
 	};
 
 	async.waterfall([
+	 	function(cb) {
+			return cb(null, readStream, filename);
+		},
 		function(fstream, uploadFilename, cb) {
 			console.log('Begin hashing', uploadFilename);
 
@@ -75,7 +78,7 @@ function uploadFile(fileExt, bucket, keyPrefix, contentType, cb) {
 }
 
 function detectFaces(file, cb) {
-	console.log('Starting Image processing' file);
+	console.log('Starting Image processing', file);
 	
 	cv.readImage(file, function(err, im){
 		if (err) throw err;
@@ -106,14 +109,14 @@ function processImage(s3Event, srcKey, cb) {
 			dlStream.on('end', function() {
 				cb(null, 'download finished');
 			});
-			dlStream.pipe(fs.createWriteStream(dlFile));
+			dlStream.pipe(fs.createWriteStream(file));
 		},
 		function(cb) {
 			detectFaces(file, cb);
 		},
 		function(cb) {
 			console.log('Deleting download file');
-			fs.unlink(dlFile, cb);
+			fs.unlink(file, cb);
 		}
 	], cb);
 }
@@ -122,15 +125,16 @@ exports.handler = function(event, context) {
 
 	var s3Event = event.Records[0].s3;
 	var srcKey = decodeURIComponent(s3Event.object.key);
-	var keyPrefix = srcKey.replace(/\.[^/.]+$/, '');
+	var index = srcKey.lastIndexOf("/");
+	var fileName = srcKey.substr(index + 1)
+	var keyPrefix = fileName.replace(/\.[^/.]+$/, '');
 	var format = config.format;
 
 	async.series([
 		function (cb) { processImage(s3Event, srcKey, cb); },
-		function (cb) {
-			var dstBucket = config.destinationBucket;
+		function (cb) {	
 			async.parallel([
-				function (cb) { uploadFile(format.image.extension, s3Event.bucket.name + '/' + dstBucket, keyPrefix, format.image.mimeType, cb); }
+				function (cb) { uploadFile(format.image.extension, s3Event.bucket.name + '/' + config.destination, keyPrefix, format.image.mimeType, cb); }
 			], cb);
 		}
 	], function(err, results) {

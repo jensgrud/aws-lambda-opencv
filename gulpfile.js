@@ -86,14 +86,14 @@ gulp.task('zip', function() {
 });
 
 gulp.task('uploadLambda', function() {
-  AWS.config.region = 'eu-west-1';
+  AWS.config.region = config.region;
   var lambda = new AWS.Lambda();
 
-  var functionName = 'aws-lamda-opencv-face-detection';
+  var functionName = config.lambda_function;
   fs.readFile('./dist.zip', function(err, data) {
-        var current = data.Configuration;
-    var params = {
-      FunctionName: functionName,
+ 
+   var params = {
+	FunctionName: functionName,
         Publish: false,
         ZipFile: data
     };
@@ -107,9 +107,10 @@ gulp.task('uploadLambda', function() {
 
 // Upload the function code to S3
 gulp.task('upload', function(cb) {
+	AWS.config.region = 'eu-west-1';
 	s3.upload({
 		Bucket: config.bucket,
-		Key: "aws-lamda-opencv-face-detection.zip",
+		Key: config.destination + "/" + config.lambda_function + "." + extension,
 		Body: fs.createReadStream('./dist.zip')
 	}, cb);
 });
@@ -125,7 +126,7 @@ gulp.task('default', function(cb) {
 		['copy-opencv'],
 		['copy-haarcascade', 'js', 'npm'],
 		['zip'],
-		['upload']
+		['upload'],
 //		['uploadLambda'], issue with aws sdk and node 0.10.x https://github.com/aws/aws-sdk-js/issues/615,
 		cb
 	);
