@@ -1,7 +1,7 @@
 {
 	"lambda_function":"aws-lamda-opencv-face-detection",
-	"bucket": "heaps-static",
-	"destination":"video/upload",
+	"bucket": "your-bucket",
+	"destination":"path/to/destination",
 	"region":"eu-west-1",
 	"format": {
 		"image": {
